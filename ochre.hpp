@@ -15,11 +15,12 @@ public:
 
     ochre(account_name self)
             : contract(self),
-              global_ochres(_self, _self)
+              global_ochres(_self, _self),
+              ochres(_self, _self)
     {}
 
     //@abi action
-    void start(const std::string &description);
+    void start(const account_name owner, const uint64_t participant_limit, const std::string &description);
 
     //@abi action
     void stop(const uint64_t ochre_id);
@@ -44,14 +45,29 @@ private:
     //@abi table global i64
     struct global_ochre {
         uint64_t id = 0;
-        uint64_t nextochreid = 0;
+        uint64_t next_id = 0;
 
         uint64_t primary_key() const { return id; }
 
-        EOSLIB_SERIALIZE(global_ochre, (id)(nextochreid))
+        EOSLIB_SERIALIZE(global_ochre, (id)(next_id))
     };
 
     typedef eosio::multi_index<N(global), global_ochre> global_ochre_index;
 
+    //@abi table ochre_event
+    struct ochre_event {
+        uint64_t id;
+        account_name owner;
+        uint64_t participant_limit;
+        std::string description;
+
+        uint64_t primary_key() const { return id; }
+
+        EOSLIB_SERIALIZE(ochre_event, (id)(owner)(participant_limit)(description))
+    };
+
+    typedef eosio::multi_index<N(ochre_event), ochre_event> ochres_index;
+
     global_ochre_index global_ochres;
+    ochres_index ochres;
 };
