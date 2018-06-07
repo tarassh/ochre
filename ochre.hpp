@@ -35,17 +35,16 @@ public:
 private:
     //@abi table participant i64
     struct participant {
-        uint64_t        id;
         account_name    account;
         uint64_t        event_id;
         checksum256     hash;
         checksum256     secret;
 
-        uint64_t primary_key() const { return id; }
+        uint64_t primary_key() const { return account; }
 
         uint64_t by_event() const { return event_id; }
 
-        EOSLIB_SERIALIZE(participant, (id)(account)(event_id)(hash)(secret))
+        EOSLIB_SERIALIZE(participant, (account)(event_id)(hash)(secret))
     };
 
     typedef eosio::multi_index<N(participant), participant,
@@ -85,7 +84,7 @@ private:
             return revealment && reveal_counter < participant_limit;
         }
 
-        EOSLIB_SERIALIZE(ochre_event, (id)(owner)(participant_limit)(enroll_counter)(reveal_counter)(description))
+        EOSLIB_SERIALIZE(ochre_event, (id)(owner)(participant_limit)(enroll_counter)(reveal_counter)(description)(enrollment)(revealment))
     };
 
     typedef eosio::multi_index<N(events), ochre_event> event_index;

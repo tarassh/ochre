@@ -1,5 +1,6 @@
 #include <eosiolib/eosio.hpp>
 #include <ochre.hpp>
+#include <vector>
 
 void ochre::start(const account_name owner, const uint64_t participant_limit, const std::string &description) {
     // Create global ochre counter if not exists
@@ -28,20 +29,35 @@ void ochre::start(const account_name owner, const uint64_t participant_limit, co
         new_event.revealment          = false;
     });
 
-    eosio::print("OChRe event (id =",  iter->id, ") for ", eosio::name{iter->owner}, "\n");
-    eosio::print("Description: ", iter->description, "\n");
+    eosio::print("New OChRe event registered [id =",  iter->id, "]\n",
+                 "Owner: ", eosio::name{iter->owner}, "\n",
+                 "Description: ", iter->description, "\n",
+                 "Maximum participant number: ", iter->participant_limit, "\n");
 }
 
 void ochre::stop(const uint64_t event_id) {
-    auto event_iter = events.find(event_id);
-    eosio_assert(event_iter != events.end(), "Event does not exists");
-    require_auth(event_iter->owner);
+    auto iter = events.find(event_id);
+    eosio_assert(iter != events.end(), "Event does not exists");
+    require_auth(iter->owner);
 
-    events.erase(event_iter);
+    eosio::print("Removing OChRe event [id =",  iter->id, "]\n",
+                 "Owner: ", eosio::name{iter->owner}, "\n",
+                 "Description: ", iter->description, "\n");
+
+    events.erase(iter);
 
     auto idx = participants.template get_index<N(event)>();
+
+    eosio::print("Removing Participants...\n");
+    vector<account_name> to_remove;
     for (const auto &item: idx) {
-        eosio::print("id=", item.id, ", name=", eosio::name{item.account}, "event id=", item.event_id);
+        eosio::print("Name = ", eosio::name{item.account}, "\n");
+        to_remove.push_back(item.account);
+    }
+
+    for (const auto &account: to_remove) {
+        auto iter = participants.find(account);
+        participants.erase(iter);
     }
 }
 
@@ -58,14 +74,13 @@ void ochre::enroll(const uint64_t event_id, const account_name participant, cons
     }
 
     auto iter = participants.emplace(_self, [&](auto &new_participant){
-        new_participant.id       = participants.available_primary_key();
         new_participant.account  = participant;
         new_participant.event_id = event_id;
         new_participant.hash     = hash;
         new_participant.secret   = {0};
     });
 
-    eosio::print("New Participant ", eosio::name{iter->account}, "\n");
+    eosio::print("New Participant: ", eosio::name{iter->account}, "\n");
 
     events.modify(event_iter, 0, [&](auto &event) {
         if (++event.enroll_counter == event.participant_limit) {
