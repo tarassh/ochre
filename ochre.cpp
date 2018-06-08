@@ -33,7 +33,8 @@ void ochre::start(const account_name owner, const uint64_t participant_limit, co
     eosio::print("New OChRe event registered [id = ",  iter->id, "]\n",
                  "Owner: ", eosio::name{iter->owner}, "\n",
                  "Description: ", iter->description, "\n",
-                 "Maximum participant number: ", iter->participant_limit, "\n");
+                 "Maximum participant number: ", iter->participant_limit, "\n",
+                 "Scope: ", name{events.get_scope()}, "\n");
 }
 
 void ochre::stop(const uint64_t event_id) {
@@ -75,8 +76,6 @@ void ochre::enroll(const uint64_t event_id, const account_name participant, cons
     auto idx = participants.get_index<N(byevent)>();
 
     for (const auto &item: idx) {
-        item.print();
-        eosio::print("\n");
         bool already_enrolled = item.event_id == event_id && item.account == participant;
         eosio_assert(!already_enrolled, "Already enrolled");
     }
@@ -89,7 +88,8 @@ void ochre::enroll(const uint64_t event_id, const account_name participant, cons
         new_participant.secret   = {0};
     });
 
-    eosio::print("Event [", iter->event_id, "]: new participant: ", eosio::name{iter->account}, "\n");
+    eosio::print("Event [", iter->event_id, "]: new participant: ", eosio::name{iter->account}, "\n",
+                 "Scope: ", name{participants.get_scope()}, "\nHash: ");
     printhex(&iter->hash, sizeof(iter->hash));
     eosio::print("\n");
 
