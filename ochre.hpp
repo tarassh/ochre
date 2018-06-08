@@ -35,20 +35,28 @@ public:
 private:
     //@abi table participant i64
     struct participant {
+        uint64_t        id;
         account_name    account;
         uint64_t        event_id;
         checksum256     hash;
         checksum256     secret;
 
-        uint64_t primary_key() const { return account; }
+        uint64_t primary_key() const { return id; }
+
+        account_name by_account() const { return account; }
 
         uint64_t by_event() const { return event_id; }
 
-        EOSLIB_SERIALIZE(participant, (account)(event_id)(hash)(secret))
+        void print() const {
+            eosio::print("Participant: id = ", id, ", account = ", name{account}, " event = ", event_id);
+        }
+
+        EOSLIB_SERIALIZE(participant, (id)(account)(event_id)(hash)(secret))
     };
 
     typedef eosio::multi_index<N(participant), participant,
-            indexed_by<N(event), const_mem_fun<participant, uint64_t, &participant::by_event> >
+            indexed_by<N(byevent), const_mem_fun<participant, uint64_t, &participant::by_event> >,
+            indexed_by<N(byaccount), const_mem_fun<participant, account_name, &participant::by_account> >
     > participant_index;
 
     //@abi table global i64
@@ -73,18 +81,24 @@ private:
         std::string  description;
         bool         enrollment;
         bool         revealment;
+        account_name winner;
 
         uint64_t primary_key() const { return id; }
 
         bool can_enroll() const {
-            return enrollment && enroll_counter < participant_limit;
+            return enrollment;
         }
 
         bool can_reveal() const {
-            return revealment && reveal_counter < participant_limit;
+            return revealment;
         }
 
-        EOSLIB_SERIALIZE(ochre_event, (id)(owner)(participant_limit)(enroll_counter)(reveal_counter)(description)(enrollment)(revealment))
+        void print() const {
+            eosio::print("Event: id = ", id, ", owner = ", name{owner}, ", limit = ", participant_limit,
+                         ", enrolled = ", enroll_counter, ", revealed = ", reveal_counter);
+        }
+
+        EOSLIB_SERIALIZE(ochre_event, (id)(owner)(participant_limit)(enroll_counter)(reveal_counter)(description)(enrollment)(revealment)(winner))
     };
 
     typedef eosio::multi_index<N(events), ochre_event> event_index;

@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 
-# deploy contract
-cleos create account eosio ochre EOS88FhBenkNsFxRxBvYNzS75JCbxMWFaykkQz42Shc7kijnydmZM EOS88FhBenkNsFxRxBvYNzS75JCbxMWFaykkQz42Shc7kijnydmZM
-cleos set contract ochre ../ochre -p ochre
 
 # create accounts
+cleos create account eosio ochre EOS88FhBenkNsFxRxBvYNzS75JCbxMWFaykkQz42Shc7kijnydmZM EOS88FhBenkNsFxRxBvYNzS75JCbxMWFaykkQz42Shc7kijnydmZM
 cleos create account eosio user EOS88FhBenkNsFxRxBvYNzS75JCbxMWFaykkQz42Shc7kijnydmZM EOS88FhBenkNsFxRxBvYNzS75JCbxMWFaykkQz42Shc7kijnydmZM
 cleos create account eosio p1 EOS88FhBenkNsFxRxBvYNzS75JCbxMWFaykkQz42Shc7kijnydmZM EOS88FhBenkNsFxRxBvYNzS75JCbxMWFaykkQz42Shc7kijnydmZM
 cleos create account eosio p2 EOS88FhBenkNsFxRxBvYNzS75JCbxMWFaykkQz42Shc7kijnydmZM EOS88FhBenkNsFxRxBvYNzS75JCbxMWFaykkQz42Shc7kijnydmZM

@@ -1,4 +1,5 @@
 #include <eosiolib/eosio.hpp>
+#include <eosiolib/print.h>
 #include <ochre.hpp>
 #include <vector>
 
@@ -29,7 +30,7 @@ void ochre::start(const account_name owner, const uint64_t participant_limit, co
         new_event.revealment          = false;
     });
 
-    eosio::print("New OChRe event registered [id =",  iter->id, "]\n",
+    eosio::print("New OChRe event registered [id = ",  iter->id, "]\n",
                  "Owner: ", eosio::name{iter->owner}, "\n",
                  "Description: ", iter->description, "\n",
                  "Maximum participant number: ", iter->participant_limit, "\n");
@@ -40,13 +41,13 @@ void ochre::stop(const uint64_t event_id) {
     eosio_assert(iter != events.end(), "Event does not exists");
     require_auth(iter->owner);
 
-    eosio::print("Removing OChRe event [id =",  iter->id, "]\n",
+    eosio::print("Removing OChRe event [id = ",  iter->id, "]\n",
                  "Owner: ", eosio::name{iter->owner}, "\n",
                  "Description: ", iter->description, "\n");
 
     events.erase(iter);
 
-    auto idx = participants.template get_index<N(event)>();
+    auto idx = participants.template get_index<N(byevent)>();
 
     eosio::print("Removing Participants...\n");
     vector<account_name> to_remove;
@@ -68,19 +69,26 @@ void ochre::enroll(const uint64_t event_id, const account_name participant, cons
     eosio_assert(event_iter != events.end(), "Event does not exists");
     eosio_assert(event_iter->can_enroll(), "Enrollment is closed");
 
-    auto idx = participants.get_index<N(event)>();
+    auto idx = participants.get_index<N(byevent)>();
+
     for (const auto &item: idx) {
-        eosio_assert(item.account != participant, "Already joined");
+        item.print();
+        eosio::print("\n");
+        bool already_enrolled = item.event_id == event_id && item.account == participant;
+        eosio_assert(!already_enrolled, "Already enrolled");
     }
 
     auto iter = participants.emplace(_self, [&](auto &new_participant){
+        new_participant.id       = participants.available_primary_key();
         new_participant.account  = participant;
         new_participant.event_id = event_id;
         new_participant.hash     = hash;
         new_participant.secret   = {0};
     });
 
-    eosio::print("New Participant: ", eosio::name{iter->account}, "\n");
+    eosio::print("Event [", iter->event_id, "]: new participant: ", eosio::name{iter->account}, "\n");
+    printhex(&iter->hash, sizeof(iter->hash));
+    eosio::print("\n");
 
     events.modify(event_iter, 0, [&](auto &event) {
         if (++event.enroll_counter == event.participant_limit) {
@@ -92,6 +100,16 @@ void ochre::enroll(const uint64_t event_id, const account_name participant, cons
     if (event_iter->revealment) {
         eosio::print("Ready to reveal\n");
     }
+
+    eosio::print("------EVENT------\n");
+    event_iter->print();
+    eosio::print("\n------END-----\n");
+    eosio::print("------PARTICIPANTS------\n");
+    for (const auto &item: idx) {
+        item.print();
+        eosio::print("\n");
+    }
+    eosio::print("------END------\n");
 }
 
 void ochre::reveal(const uint64_t event_id, const account_name participant, const checksum256 &secret) {
@@ -100,6 +118,11 @@ void ochre::reveal(const uint64_t event_id, const account_name participant, cons
     auto event_iter = events.find(event_id);
     eosio_assert(event_iter != events.end(), "Event does not exists");
     eosio_assert(event_iter->can_reveal(), "Revealment is closed");
+
+    auto idx = participants.get_index<N(byevent)>();
+    for (const auto &item: idx) {
+        eosio::print("ACCOUNT =", eosio::name{item.account}, "\n");
+    }
 }
 
 EOSIO_ABI(ochre, (start)(stop)(enroll)(reveal))
