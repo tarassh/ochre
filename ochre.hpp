@@ -40,6 +40,7 @@ private:
         uint64_t        event_id;
         checksum256     hash;
         checksum256     secret;
+        bool            revealed;
 
         uint64_t primary_key() const { return id; }
 
@@ -51,7 +52,13 @@ private:
             eosio::print("Participant: id = ", id, ", account = ", name{account}, " event = ", event_id);
         }
 
-        EOSLIB_SERIALIZE(participant, (id)(account)(event_id)(hash)(secret))
+        uint128_t get_secret() const {
+            uint128_t value = 0;
+            memcpy(&value, &secret, sizeof(value));
+            return value;
+        }
+
+        EOSLIB_SERIALIZE(participant, (id)(account)(event_id)(hash)(secret)(revealed))
     };
 
     typedef eosio::multi_index<N(participant), participant,

@@ -1,5 +1,6 @@
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/print.h>
+#include <eosiolib/crypto.h>
 #include <ochre.hpp>
 #include <vector>
 
@@ -86,6 +87,7 @@ void ochre::enroll(const uint64_t event_id, const account_name participant, cons
         new_participant.event_id = event_id;
         new_participant.hash     = hash;
         new_participant.secret   = {0};
+        new_participant.revealed = false;
     });
 
     eosio::print("Event [", iter->event_id, "]: new participant: ", eosio::name{iter->account}, "\n",
@@ -124,7 +126,43 @@ void ochre::reveal(const uint64_t event_id, const account_name participant, cons
 
     auto idx = participants.get_index<N(byevent)>();
     for (const auto &item: idx) {
-        eosio::print("ACCOUNT =", eosio::name{item.account}, "\n");
+        if (item.event_id == event_id && item.account == participant) {
+            eosio_assert(!item.revealed, "Already revealed");
+
+            assert_sha256( (char *)&secret, sizeof(secret), (const checksum256 *)&item.hash );
+
+            participants.modify(item, 0, [&](auto &p) {
+                p.secret = secret;
+                p.revealed = true;
+            });
+
+            break;
+        }
+    }
+
+    events.modify(event_iter, 0, [&](auto &event) {
+        if (++event.reveal_counter == event.participant_limit) {
+            event.enrollment = false;
+            event.revealment = false;
+        }
+    });
+
+    if (!event_iter->revealment) {
+        idx = participants.get_index<N(byevent)>();
+
+        uint128_t number = 0;
+        for (const auto &item: idx) {
+            if (item.event_id == event_id) {
+                eosio::print("Participant secret: ");
+                printhex(&item.secret, sizeof(item.secret));
+                eosio::print(" uint = ", item.get_secret(), "\n");
+
+                number += item.get_secret();
+            }
+        }
+
+        number %= event_iter->participant_limit;
+        eosio::print("WINNER ", number);
     }
 }
 
