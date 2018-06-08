@@ -49,15 +49,18 @@ void ochre::stop(const uint64_t event_id) {
 
     auto idx = participants.template get_index<N(byevent)>();
 
-    eosio::print("Removing Participants...\n");
-    vector<account_name> to_remove;
+    vector<uint64_t> to_remove;
     for (const auto &item: idx) {
-        eosio::print("Name = ", eosio::name{item.account}, "\n");
-        to_remove.push_back(item.account);
+        if (item.event_id == event_id) {
+            to_remove.push_back(item.id);
+        }
     }
 
-    for (const auto &account: to_remove) {
-        auto iter = participants.find(account);
+    eosio::print("Removing Participants...\n");
+    for (const auto &participant_id: to_remove) {
+        auto iter = participants.find(participant_id);
+        iter->print();
+        eosio::print("\n");
         participants.erase(iter);
     }
 }
