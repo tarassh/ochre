@@ -41,6 +41,7 @@ private:
         checksum256     hash;
         checksum256     secret;
         bool            revealed;
+        uint64_t        reveal_index;
 
         uint64_t primary_key() const { return id; }
 
@@ -58,7 +59,7 @@ private:
             return value;
         }
 
-        EOSLIB_SERIALIZE(participant, (id)(account)(event_id)(hash)(secret)(revealed))
+        EOSLIB_SERIALIZE(participant, (id)(account)(event_id)(hash)(secret)(revealed)(reveal_index))
     };
 
     typedef eosio::multi_index<N(participant), participant,

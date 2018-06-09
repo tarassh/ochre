@@ -3,6 +3,7 @@
 #include <eosiolib/crypto.h>
 #include <ochre.hpp>
 #include <vector>
+#include <limits>
 
 void ochre::start(const account_name owner, const uint64_t participant_limit, const std::string &description) {
     // Create global ochre counter if not exists
@@ -88,6 +89,7 @@ void ochre::enroll(const uint64_t event_id, const account_name participant, cons
         new_participant.hash     = hash;
         new_participant.secret   = {0};
         new_participant.revealed = false;
+        new_participant.reveal_index = std::numeric_limits<uint64_t>::max();
     });
 
     eosio::print("Event [", iter->event_id, "]: new participant: ", eosio::name{iter->account}, "\n",
@@ -134,6 +136,7 @@ void ochre::reveal(const uint64_t event_id, const account_name participant, cons
             participants.modify(item, 0, [&](auto &p) {
                 p.secret = secret;
                 p.revealed = true;
+                p.reveal_index = event_iter->reveal_counter;
             });
 
             break;
@@ -162,7 +165,17 @@ void ochre::reveal(const uint64_t event_id, const account_name participant, cons
         }
 
         number %= event_iter->participant_limit;
-        eosio::print("WINNER ", number);
+
+        for (const auto &item: idx) {
+            if (item.event_id == event_id && item.reveal_index == number) {
+                events.modify(event_iter, 0, [&](auto &event) {
+                    event.winner = item.account;
+                });
+
+                eosio::print("Winner of the OChRe event [", event_iter->id, "] is ", name{item.account});
+                break;
+            }
+        }
     }
 }
 
