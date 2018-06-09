@@ -3,6 +3,7 @@
  *  @copyright defined in eos/LICENSE.txt
  */
 #include <string>
+#include <limits>
 #include <eosiolib/eosio.hpp>
 
 
@@ -38,9 +39,8 @@ private:
         uint64_t        id;
         account_name    account;
         uint64_t        event_id;
-        checksum256     hash;
+        checksum256     commitment;
         checksum256     secret;
-        bool            revealed;
         uint64_t        reveal_index;
 
         uint64_t primary_key() const { return id; }
@@ -53,13 +53,15 @@ private:
             eosio::print("Participant: id = ", id, ", account = ", name{account}, " event = ", event_id);
         }
 
+        bool revealed() const { return reveal_index != std::numeric_limits<uint64_t>::max(); }
+
         uint128_t get_secret() const {
             uint128_t value = 0;
             memcpy(&value, &secret, sizeof(value));
             return value;
         }
 
-        EOSLIB_SERIALIZE(participant, (id)(account)(event_id)(hash)(secret)(revealed)(reveal_index))
+        EOSLIB_SERIALIZE(participant, (id)(account)(event_id)(commitment)(secret)(reveal_index))
     };
 
     typedef eosio::multi_index<N(participant), participant,

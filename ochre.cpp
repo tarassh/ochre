@@ -3,7 +3,6 @@
 #include <eosiolib/crypto.h>
 #include <ochre.hpp>
 #include <vector>
-#include <limits>
 
 void ochre::start(const account_name owner, const uint64_t participant_limit, const std::string &description) {
     // Create global ochre counter if not exists
@@ -68,7 +67,7 @@ void ochre::stop(const uint64_t event_id) {
     }
 }
 
-void ochre::enroll(const uint64_t event_id, const account_name participant, const checksum256 &hash) {
+void ochre::enroll(const uint64_t event_id, const account_name participant, const checksum256 &commitment) {
     require_auth(participant);
 
     auto event_iter = events.find(event_id);
@@ -83,18 +82,17 @@ void ochre::enroll(const uint64_t event_id, const account_name participant, cons
     }
 
     auto iter = participants.emplace(_self, [&](auto &new_participant){
-        new_participant.id       = participants.available_primary_key();
-        new_participant.account  = participant;
-        new_participant.event_id = event_id;
-        new_participant.hash     = hash;
-        new_participant.secret   = {0};
-        new_participant.revealed = false;
+        new_participant.id           = participants.available_primary_key();
+        new_participant.account      = participant;
+        new_participant.event_id     = event_id;
+        new_participant.commitment   = commitment;
+        new_participant.secret       = {0};
         new_participant.reveal_index = std::numeric_limits<uint64_t>::max();
     });
 
     eosio::print("Event [", iter->event_id, "]: new participant: ", eosio::name{iter->account}, "\n",
-                 "Scope: ", name{participants.get_scope()}, "\nHash: ");
-    printhex(&iter->hash, sizeof(iter->hash));
+                 "Scope: ", name{participants.get_scope()}, "\nCommitment: ");
+    printhex(&iter->commitment, sizeof(iter->commitment));
     eosio::print("\n");
 
     events.modify(event_iter, 0, [&](auto &event) {
@@ -108,15 +106,17 @@ void ochre::enroll(const uint64_t event_id, const account_name participant, cons
         eosio::print("Ready to reveal\n");
     }
 
-    eosio::print("------EVENT------\n");
+    eosio::print("\n----------------------\n");
     event_iter->print();
-    eosio::print("\n------END-----\n");
-    eosio::print("------PARTICIPANTS------\n");
+    eosio::print("\nParticipants: \n");
     for (const auto &item: idx) {
-        item.print();
-        eosio::print("\n");
+        if (item.event_id == event_iter->id) {
+            eosio::print("\t");
+            item.print();
+            eosio::print("\n");
+        }
     }
-    eosio::print("------END------\n");
+    eosio::print("\n----------------------\n");
 }
 
 void ochre::reveal(const uint64_t event_id, const account_name participant, const checksum256 &secret) {
@@ -129,13 +129,12 @@ void ochre::reveal(const uint64_t event_id, const account_name participant, cons
     auto idx = participants.get_index<N(byevent)>();
     for (const auto &item: idx) {
         if (item.event_id == event_id && item.account == participant) {
-            eosio_assert(!item.revealed, "Already revealed");
+            eosio_assert(!item.revealed(), "Already revealed");
 
-            assert_sha256( (char *)&secret, sizeof(secret), (const checksum256 *)&item.hash );
+            assert_sha256( (char *)&secret, sizeof(secret), (const checksum256 *)&item.commitment );
 
             participants.modify(item, 0, [&](auto &p) {
                 p.secret = secret;
-                p.revealed = true;
                 p.reveal_index = event_iter->reveal_counter;
             });
 
