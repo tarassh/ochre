@@ -36,6 +36,8 @@ void ochre::start(const account_name owner, const uint64_t participant_limit, co
                  "Description: ", iter->description, "\n",
                  "Maximum participant number: ", iter->participant_limit, "\n",
                  "Scope: ", name{events.get_scope()}, "\n");
+
+    require_recipient(owner);
 }
 
 void ochre::stop(const uint64_t event_id) {
@@ -48,6 +50,7 @@ void ochre::stop(const uint64_t event_id) {
                  "Description: ", iter->description, "\n");
 
     events.erase(iter);
+    require_recipient(iter->owner);
 
     auto idx = participants.template get_index<N(byevent)>();
 
@@ -117,6 +120,9 @@ void ochre::enroll(const uint64_t event_id, const account_name participant, cons
         }
     }
     eosio::print("\n----------------------\n");
+
+    require_recipient(event_iter->owner);
+    require_recipient(iter->account);
 }
 
 void ochre::reveal(const uint64_t event_id, const account_name participant, const checksum256 &secret) {
@@ -172,10 +178,13 @@ void ochre::reveal(const uint64_t event_id, const account_name participant, cons
                 });
 
                 eosio::print("Winner of the OChRe event [", event_iter->id, "] is ", name{item.account});
+                require_recipient(item.account);
                 break;
             }
         }
     }
+
+    require_recipient(event_iter->owner);
 }
 
 EOSIO_ABI(ochre, (start)(stop)(enroll)(reveal))
